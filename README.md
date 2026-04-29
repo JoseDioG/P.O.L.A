@@ -84,6 +84,25 @@ Servidor rodando em:
 
 ------------------------------------------------------------------------
 
+## Pradronização de Commit
+
+- feat - nova funcionalidade
+- fix - correção de bug
+- docs - documentação
+- style - formatação (sem mudar lógica)
+- refactor - melhoria no código
+- test - testes
+- chore - tarefas internas (config, build)
+
+A descrição precisa ser objetiva
+
+Ex:
+   
+    feat: adiciona tela de login
+    fix: corrige erro de autenticação
+
+------------------------------------------------------------------------
+
 ## Fluxo do Sistema
 
 1.  Usuário registra uma ocorrência\
