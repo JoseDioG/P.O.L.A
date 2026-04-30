@@ -1,4 +1,4 @@
-# Polar
+# P.O.L.A
 
 Sistema web para registro e gestão de ocorrências institucionais, focado
 em substituir processos informais por um fluxo estruturado, rastreável e
@@ -38,16 +38,15 @@ O sistema permite:
 ## Tecnologias
 
 -   Node.js
--   Express
--   PostgreSQL
--   Prisma ORM
--   React (frontend)
+-   Python
+-   SQLite
+-   Supabase
+-   HTML/CSS/JS
 
 ------------------------------------------------------------------------
 
 ## Estrutura do Projeto
 
-    polar/
       backend/
       frontend/
       docs/
@@ -58,29 +57,23 @@ O sistema permite:
 
 ### 1. Clonar repositório
 
-    git clone <url-do-repo>
+    git clone <https://github.com/bazhish/P.O.L.A.git>
     cd polar
 
 ------------------------------------------------------------------------
 
 ### 2. Backend
 
-    cd backend
-    npm install
-    npx prisma migrate dev
-    node src/server.js
-
+    **************
 Servidor rodando em:
 
-    http://localhost:3000
+    **************
 
 ------------------------------------------------------------------------
 
 ### 3. Frontend
 
-    cd frontend
-    npm install
-    npm run dev
+    **************
 
 ------------------------------------------------------------------------
 
