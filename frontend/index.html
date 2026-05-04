@@ -5,45 +5,27 @@
 </head>
 <body>
 
-<h1>Registrar Ocorrência</h1>
-
+<h1>Polar</h1>
+<h2>Registro de ocorrencias</h2>
 <input id="student" placeholder="Nome do aluno">
 <input id="desc" placeholder="Descrição">
-<button onclick="create()">Registrar</button>
-
-<h2>Ocorrências</h2>
-<ul id="list"></ul>
-
-<script>
-async function create() {
-  const student = document.getElementById("student").value;
-  const description = document.getElementById("desc").value;
-
-  await fetch("http://localhost:3000/occurrences", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ student, description })
-  });
-
-  load();
-}
-
-async function load() {
-  const res = await fetch("http://localhost:3000/occurrences");
-  const data = await res.json();
-
-  const list = document.getElementById("list");
-  list.innerHTML = "";
-
-  data.forEach(o => {
-    const li = document.createElement("li");
-    li.innerText = `${o.student} - ${o.description} (${o.status})`;
-    list.appendChild(li);
-  });
-}
-
-load();
-</script>
-
+<h2>Tipo de ocorrencias</h2>
+<select name="meu-select">
+    <option value="opcao1">Brigas/agressões</option>
+    <option value="opcao2">Atraso</option>
+    <option value="opcao3">Falta de entrega</option>
+    <option value="opcao4">Bullyng</option>
+    <option value="opcao5">indisciplina</option>
+    <option value="opcao6">Vandalismo</option>
+    <option value="opcao7">Uso de celular</option>
+    <option value="opcao8">Discriminação/preconceito</option>
+    <option value="opcao9">Danos ao patrimônio</option>
+    <option value="opcao10">Linguagem ofensiva</option>
+    <option value="opcao11">Bagunça constante</option>
+    <option value="opcao12">Ameaças/intimidação</option>
+    <option value="Outros">Outros</option>
+</select> e
+<Input type="text" id="DescOcorrencia" placeholder="Descreva a Ocorrencia"></Input>
+<button>Registrar</button>
 </body>
 </html>
