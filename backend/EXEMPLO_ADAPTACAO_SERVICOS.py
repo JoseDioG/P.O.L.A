@@ -1,4 +1,7 @@
+# SUPABASE_DISABLED_FOR_NOW
 """
+# SUPABASE_DISABLED_FOR_NOW
+# Exemplo mantido apenas como referencia futura; fase atual usa JSON local.
 EXEMPLO DE ADAPTAÇÃO DE SERVIÇO PARA SUPABASE
 
 Este arquivo mostra como adaptar os serviços existentes 

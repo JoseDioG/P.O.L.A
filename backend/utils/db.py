@@ -1,9 +1,9 @@
 import json
 import os
 import tempfile
+import threading
 from datetime import datetime
 from pathlib import Path
-
 from models.aluno import Aluno
 from models.falta import Falta
 from models.nota import Nota
@@ -19,6 +19,7 @@ ARQUIVO_DB_PADRAO = BASE_DIR / "banco_dados.json"
 ARQUIVO_DB = Path(os.getenv("POLAR_DB_PATH") or ARQUIVO_DB_PADRAO)
 SALA_PADRAO = "Sem sala"
 USUARIO_BOOTSTRAP = {"nome": "admin", "papel": "ADM"}
+DB_LOCK = threading.RLock()
 
 
 def resolver_caminho_db(caminho=None):
@@ -141,6 +142,11 @@ def _normalizar_alunos(dados, salas):
         sala = normalizar_texto(item.get("sala", "")) or SALA_PADRAO
         alterado = _garantir_sala(salas, sala) or alterado
         sala_db = _buscar_por_id_ou_nome(salas, item.get("sala_id"), sala)
+        if sala_db is None:
+            sala_db = _buscar_por_nome(salas, sala) or _buscar_por_nome(salas, SALA_PADRAO) or {
+                "nome": SALA_PADRAO,
+                "id": None,
+            }
 
         try:
             aluno = Aluno(
@@ -169,7 +175,8 @@ def _garantir_aluno(alunos, salas, nome):
 
     _garantir_sala(salas, SALA_PADRAO)
     sala = _buscar_por_nome(salas, SALA_PADRAO)
-    alunos.append(Aluno(nome, SALA_PADRAO, sala_id=sala.get("id")).para_dict())
+    sala_id = sala.get("id") if sala else None
+    alunos.append(Aluno(nome, SALA_PADRAO, sala_id=sala_id).para_dict())
     return True
 
 
@@ -288,26 +295,27 @@ def normalizar_db(dados):
 
 
 def salvar_db(dados, caminho=None):
-    caminho = resolver_caminho_db(caminho)
-    dados_normalizados, _ = normalizar_db(dados)
-    caminho.parent.mkdir(parents=True, exist_ok=True)
+    with DB_LOCK:
+        caminho = resolver_caminho_db(caminho)
+        dados_normalizados, _ = normalizar_db(dados)
+        caminho.parent.mkdir(parents=True, exist_ok=True)
 
-    fd, temporario = tempfile.mkstemp(
-        prefix=".polar-",
-        suffix=".tmp",
-        dir=str(caminho.parent),
-        text=True,
-    )
+        fd, temporario = tempfile.mkstemp(
+            prefix=".polar-",
+            suffix=".tmp",
+            dir=str(caminho.parent),
+            text=True,
+        )
 
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as arquivo:
-            json.dump(dados_normalizados, arquivo, ensure_ascii=False, indent=2)
-            arquivo.write("\n")
-        os.replace(temporario, caminho)
-    except Exception:
-        if os.path.exists(temporario):
-            os.remove(temporario)
-        raise
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as arquivo:
+                json.dump(dados_normalizados, arquivo, ensure_ascii=False, indent=2)
+                arquivo.write("\n")
+            os.replace(temporario, caminho)
+        except Exception:
+            if os.path.exists(temporario):
+                os.remove(temporario)
+            raise
 
 
 def _recriar_db_corrompido(caminho):
@@ -326,25 +334,26 @@ def _recriar_db_corrompido(caminho):
 
 
 def carregar_db(caminho=None):
-    caminho = resolver_caminho_db(caminho)
+    with DB_LOCK:
+        caminho = resolver_caminho_db(caminho)
 
-    if not caminho.exists():
-        db = criar_db_vazio()
-        salvar_db(db, caminho)
-        return db
+        if not caminho.exists():
+            db = criar_db_vazio()
+            salvar_db(db, caminho)
+            return db
 
-    try:
-        with open(caminho, "r", encoding="utf-8") as arquivo:
-            dados = json.load(arquivo)
-    except json.JSONDecodeError:
-        return _recriar_db_corrompido(caminho)
-    except OSError as erro:
-        log_error(f"Nao foi possivel ler o banco de dados: {erro}")
-        return criar_db_vazio()
+        try:
+            with open(caminho, "r", encoding="utf-8") as arquivo:
+                dados = json.load(arquivo)
+        except json.JSONDecodeError:
+            return _recriar_db_corrompido(caminho)
+        except OSError as erro:
+            log_error(f"Nao foi possivel ler o banco de dados: {erro}")
+            return criar_db_vazio()
 
-    normalizado, alterado = normalizar_db(dados)
-    if alterado:
-        log_info("Banco normalizado para a estrutura academica atual")
-        salvar_db(normalizado, caminho)
+        normalizado, alterado = normalizar_db(dados)
+        if alterado:
+            log_info("Banco normalizado para a estrutura academica atual")
+            salvar_db(normalizado, caminho)
 
-    return normalizado
+        return normalizado

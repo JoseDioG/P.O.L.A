@@ -1,8 +1,8 @@
 import getpass
 import os
 from datetime import datetime
-
 from utils.security import validar_senha
+from utils.sessions import contexto_autenticado
 
 
 ROLES = ("PROFESSOR", "COORDENADOR", "DIRETOR", "ADM")
@@ -139,6 +139,8 @@ def validar_papel(papel):
 
 
 def normalizar_papel(papel):
+    if not isinstance(papel, str):
+        return ""
     papel = papel.upper().strip()
     return PAPEIS_LEGADOS.get(papel, papel)
 
@@ -187,6 +189,9 @@ def validar_data(data):
 
 
 def tem_permissao(usuario, permissao):
+    if not contexto_autenticado(usuario):
+        return False
+
     papel = getattr(usuario, "papel", None)
     if not validar_papel(papel):
         return False
@@ -195,6 +200,9 @@ def tem_permissao(usuario, permissao):
 
 
 def exigir_permissao(usuario, permissao):
+    if not contexto_autenticado(usuario):
+        return False, "Acesso negado: usuario nao autenticado"
+
     if tem_permissao(usuario, permissao):
         return True, "Permissao concedida"
     papel = getattr(usuario, "papel", "DESCONHECIDO")

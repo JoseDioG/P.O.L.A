@@ -1,8 +1,22 @@
 import os
 from pathlib import Path
 from datetime import datetime
-import psycopg
-from dotenv import load_dotenv
+
+# SUPABASE_DISABLED_FOR_NOW
+# A integração Supabase/PostgreSQL permanece guardada para reativação futura,
+# mas o backend profissionalizado desta fase deve usar somente JSON local.
+try:
+    # SUPABASE_DISABLED_FOR_NOW
+    import psycopg  # type: ignore
+except ImportError:
+    psycopg = None
+
+try:
+    # SUPABASE_DISABLED_FOR_NOW
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv(*args, **kwargs):
+        return False
 
 # Carregar variáveis de ambiente
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -19,6 +33,7 @@ class ConexaoBD:
     @classmethod
     def obter_conexao(cls):
         """Obtém ou cria uma conexão com o banco de dados"""
+        raise RuntimeError("SUPABASE_DISABLED_FOR_NOW: use utils.db com JSON local")
         if cls._conexao is None:
             cls._conexao = cls._conectar()
         return cls._conexao

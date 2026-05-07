@@ -1,7 +1,11 @@
 from db import conectar
 
+# SUPABASE_DISABLED_FOR_NOW
+# CRUD legado preservado; nao executar conexao externa nesta fase.
+
 
 def criar_usuario(nome, idade):
+    raise RuntimeError("SUPABASE_DISABLED_FOR_NOW: use backend Python com JSON local")
     with conectar() as conexao:
         with conexao.cursor() as cursor:
             cursor.execute(

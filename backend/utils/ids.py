@@ -1,4 +1,5 @@
 from uuid import uuid4
+from uuid import UUID
 
 
 def gerar_id():
@@ -6,8 +7,14 @@ def gerar_id():
 
 
 def id_valido(valor):
-    return isinstance(valor, str) and bool(valor.strip())
+    try:
+        UUID(valor)
+        return True
+    except:
+        return False
 
 
 def garantir_id(valor=None):
-    return valor.strip() if id_valido(valor) else gerar_id()
+    if valor and id_valido(valor):
+        return valor.strip()
+    return gerar_id()

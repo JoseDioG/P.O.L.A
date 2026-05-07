@@ -1,8 +1,14 @@
-"""Gerenciador de operações com banco de dados PostgreSQL (Supabase)"""
+"""Gerenciador de operações com banco de dados PostgreSQL (Supabase).
+
+# SUPABASE_DISABLED_FOR_NOW
+Mantido apenas como referência para reativação futura. A fase atual usa
+somente persistência JSON local em utils.db.
+"""
 
 from datetime import datetime
 from typing import Optional, List, Dict, Any, Tuple, cast
-import psycopg
+# SUPABASE_DISABLED_FOR_NOW
+# import psycopg
 from models.usuario import Usuario
 from models.aluno import Aluno
 from models.sala import Sala

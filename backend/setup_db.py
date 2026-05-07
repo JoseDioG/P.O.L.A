@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Script de migração e setup do banco de dados Supabase"""
+"""Script de migração e setup do banco de dados Supabase.
+
+# SUPABASE_DISABLED_FOR_NOW
+Mantido para reativação futura. Não execute nesta fase; use JSON local.
+"""
 
 import sys
 from pathlib import Path
@@ -14,6 +18,9 @@ from utils.security import gerar_senha_hash, senha_inicial_padrao
 
 def verificar_banco():
     """Verifica e setup do banco de dados"""
+    print("SUPABASE_DISABLED_FOR_NOW: setup externo desativado; use JSON local.")
+    return False
+
     print("\n" + "="*50)
     print("🔧 SETUP DO BANCO DE DADOS SUPABASE")
     print("="*50 + "\n")

@@ -1,8 +1,20 @@
 import os
 from pathlib import Path
 
-import psycopg
-from dotenv import load_dotenv
+# SUPABASE_DISABLED_FOR_NOW
+# Modulo legado preservado para reativacao futura. A fase atual usa JSON local.
+try:
+    # SUPABASE_DISABLED_FOR_NOW
+    import psycopg  # type: ignore
+except ImportError:
+    psycopg = None
+
+try:
+    # SUPABASE_DISABLED_FOR_NOW
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv(*args, **kwargs):
+        return False
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -36,6 +48,7 @@ def parametros_conexao():
 
 
 def conectar():
+    raise RuntimeError("SUPABASE_DISABLED_FOR_NOW: use backend/utils/db.py com JSON local")
     parametros = parametros_conexao()
     if isinstance(parametros, str):
         return psycopg.connect(parametros)

@@ -1,7 +1,6 @@
 from utils.ids import garantir_id
 from utils.validators import normalizar_papel, normalizar_texto, validar_nome, validar_papel
 
-
 class Usuario:
     def __init__(self, nome, papel, senha_hash=None, id=None, precisa_trocar_senha=False):
         nome = normalizar_texto(nome)
@@ -26,9 +25,12 @@ class Usuario:
             "id": self.id,
             "nome": self.nome,
             "papel": self.papel,
+            "username": self.nome,
+            "role": self.papel,
         }
         if self.senha_hash:
             dados["senha_hash"] = self.senha_hash
+            dados["password_hash"] = self.senha_hash
         if self.precisa_trocar_senha:
             dados["precisa_trocar_senha"] = True
         return dados
@@ -36,9 +38,9 @@ class Usuario:
     @classmethod
     def de_dict(cls, dados):
         return cls(
-            dados.get("nome", dados.get("nome_usuario", "")),
-            dados.get("papel", ""),
-            senha_hash=dados.get("senha_hash"),
+            dados.get("nome", dados.get("username", dados.get("nome_usuario", ""))),
+            dados.get("papel", dados.get("role", "")),
+            senha_hash=dados.get("senha_hash", dados.get("password_hash")),
             id=dados.get("id"),
             precisa_trocar_senha=dados.get("precisa_trocar_senha", False),
         )

@@ -5,8 +5,14 @@ from usuarios import (
     listar_usuarios,
 )
 
+# SUPABASE_DISABLED_FOR_NOW
+# Interface legada preservada; nao executar conexao externa nesta fase.
+
 
 def menu():
+    print("SUPABASE_DISABLED_FOR_NOW: use o backend Python com JSON local.")
+    return
+
     while True:
         print("\n=== SISTEMA DE USUÁRIOS ===")
         print("1 - Criar usuário")

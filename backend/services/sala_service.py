@@ -1,4 +1,7 @@
+from copy import deepcopy
+
 from models.sala import Sala
+from utils.db import DB_LOCK
 from utils.validators import exigir_permissao, normalizar_texto
 
 
@@ -6,21 +9,44 @@ def listar_salas(db, usuario):
     permitido, mensagem = exigir_permissao(usuario, "sala_visualizar")
     if not permitido:
         return False, mensagem, []
-    return True, "Salas listadas", list(db.get("salas", []))
+
+    with DB_LOCK:
+        salas = db.get("salas", []) if isinstance(db, dict) else []
+        if not isinstance(salas, list) or not all(isinstance(sala, dict) for sala in salas):
+            return False, "Lista de salas invalida", []
+        return True, "Salas listadas", deepcopy(salas)
 
 
 def buscar_sala(db, nome):
+    if not isinstance(db, dict):
+        return None, None
+
     nome = normalizar_texto(nome).lower()
-    for indice, sala in enumerate(db.get("salas", [])):
+    salas = db.get("salas", [])
+    if not isinstance(salas, list):
+        return None, None
+
+    for indice, sala in enumerate(salas):
+        if not isinstance(sala, dict):
+            continue
         if normalizar_texto(sala.get("nome", "")).lower() == nome:
             return indice, sala
     return None, None
 
 
 def buscar_sala_por_id(db, id):
+    if not isinstance(db, dict):
+        return None, None
+
     if not id:
         return None, None
-    for indice, sala in enumerate(db.get("salas", [])):
+    salas = db.get("salas", [])
+    if not isinstance(salas, list):
+        return None, None
+
+    for indice, sala in enumerate(salas):
+        if not isinstance(sala, dict):
+            continue
         if sala.get("id") == id:
             return indice, sala
     return None, None
@@ -31,16 +57,27 @@ def criar_sala(db, usuario, nome):
     if not permitido:
         return False, mensagem
 
-    if buscar_sala(db, nome)[1] is not None:
-        return False, "Sala ja cadastrada"
+    if not isinstance(db, dict):
+        return False, "Banco de dados invalido"
 
-    try:
-        sala = Sala(nome).para_dict()
-    except ValueError as erro:
-        return False, str(erro)
+    with DB_LOCK:
+        salas = db.get("salas")
+        if salas is None:
+            db["salas"] = []
+            salas = db["salas"]
+        if not isinstance(salas, list):
+            return False, "Lista de salas invalida"
 
-    db["salas"].append(sala)
-    return True, "Sala criada"
+        if buscar_sala(db, nome)[1] is not None:
+            return False, "Sala ja cadastrada"
+
+        try:
+            sala = Sala(nome).para_dict()
+        except ValueError as erro:
+            return False, str(erro)
+
+        salas.append(sala)
+        return True, "Sala criada"
 
 
 def editar_sala(db, usuario, indice, novo_nome):
@@ -48,25 +85,37 @@ def editar_sala(db, usuario, indice, novo_nome):
     if not permitido:
         return False, mensagem
 
-    salas = db.get("salas", [])
-    if not isinstance(indice, int) or not 0 <= indice < len(salas):
-        return False, "Sala selecionada invalida"
+    if not isinstance(db, dict):
+        return False, "Banco de dados invalido"
 
-    existente_indice, _ = buscar_sala(db, novo_nome)
-    if existente_indice is not None and existente_indice != indice:
-        return False, "Outra sala ja usa esse nome"
+    with DB_LOCK:
+        salas = db.get("salas", [])
+        if not isinstance(salas, list):
+            return False, "Lista de salas invalida"
+        if not isinstance(indice, int) or not 0 <= indice < len(salas):
+            return False, "Sala selecionada invalida"
+        if not isinstance(salas[indice], dict):
+            return False, "Registro de sala invalido"
 
-    try:
-        nova_sala = Sala(novo_nome, id=salas[indice].get("id")).para_dict()
-    except ValueError as erro:
-        return False, str(erro)
+        existente_indice, _ = buscar_sala(db, novo_nome)
+        if existente_indice is not None and existente_indice != indice:
+            return False, "Outra sala ja usa esse nome"
 
-    nome_antigo = salas[indice]["nome"]
-    salas[indice] = nova_sala
+        try:
+            nova_sala = Sala(novo_nome, id=salas[indice].get("id")).para_dict()
+        except ValueError as erro:
+            return False, str(erro)
 
-    for aluno in db.get("alunos", []):
-        if aluno.get("sala_id") == nova_sala["id"] or aluno.get("sala") == nome_antigo:
-            aluno["sala"] = nova_sala["nome"]
-            aluno["sala_id"] = nova_sala["id"]
+        nome_antigo = salas[indice]["nome"]
+        salas[indice] = nova_sala
 
-    return True, "Sala atualizada"
+        alunos = db.get("alunos", [])
+        if isinstance(alunos, list):
+            for aluno in alunos:
+                if not isinstance(aluno, dict):
+                    continue
+                if aluno.get("sala_id") == nova_sala["id"] or aluno.get("sala") == nome_antigo:
+                    aluno["sala"] = nova_sala["nome"]
+                    aluno["sala_id"] = nova_sala["id"]
+
+        return True, "Sala atualizada"

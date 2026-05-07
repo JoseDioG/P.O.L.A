@@ -1,4 +1,9 @@
+# SUPABASE_DISABLED_FOR_NOW
+
 # Database no Supabase
+
+Conteudo legado preservado para reativacao futura. A fase atual deve usar
+somente o backend Python com persistencia JSON local.
 
 Esta pasta conecta o CRUD de usuários ao PostgreSQL do Supabase.
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Teste de validação da integração com Supabase"""
+"""Teste de validação da integração com Supabase.
+
+# SUPABASE_DISABLED_FOR_NOW
+Mantido para reativação futura. Não executa conexão externa nesta fase.
+"""
 
 import sys
 from pathlib import Path
@@ -12,6 +16,9 @@ from utils.db_manager import obter_gerenciador
 
 def testar_conexao():
     """Testa a conexão e operações básicas"""
+    print("SUPABASE_DISABLED_FOR_NOW: teste externo desativado; use testes locais.")
+    return False
+
     print("\n" + "="*60)
     print("[TEST] TESTE DE VALIDACAO - BACKEND COM SUPABASE")
     print("="*60 + "\n")

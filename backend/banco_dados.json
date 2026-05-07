@@ -1,0 +1,19 @@
+{
+  "usuarios": [
+    {
+      "id": "e56c160d6ebf4ed8a1feb6a079f0b283",
+      "nome": "admin",
+      "papel": "ADM",
+      "username": "admin",
+      "role": "ADM",
+      "senha_hash": "pbkdf2_sha256$210000$7258c5364d333d770db08a2028f4cfc9$97a4bb7bfec4bfd80999ed1ed6ea02a75f741f4d90b37e48b40d85d365f4eeec",
+      "password_hash": "pbkdf2_sha256$210000$7258c5364d333d770db08a2028f4cfc9$97a4bb7bfec4bfd80999ed1ed6ea02a75f741f4d90b37e48b40d85d365f4eeec",
+      "precisa_trocar_senha": true
+    }
+  ],
+  "alunos": [],
+  "salas": [],
+  "ocorrencias": [],
+  "notas": [],
+  "faltas": []
+}
