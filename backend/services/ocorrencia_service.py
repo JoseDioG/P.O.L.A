@@ -94,9 +94,74 @@ def obter_historico(db, usuario, indice):
 def processador_ocorrencia(aluno, descricao):
     return f"Processado: {aluno} - {descricao}"
 
-if __name__ == "__main__":
-    aluno = sys.argv[1]
-    descricao = sys.argv[2]
+def resposta(data):
+    print(json.dumps(data))
 
-    resultado = processador_ocorrencia(aluno, descricao)
-    print(resultado)
+
+if __name__ == "__main__":
+    db = carregar_db()
+
+    try:
+        comando = sys.argv[1]
+
+        # 🔹 CRIAR OCORRÊNCIA
+        if comando == "criar":
+            body = json.loads(sys.argv[2])
+
+            sucesso, mensagem = criar_ocorrencia(
+                db,
+                None,  # depois você pode colocar usuário real
+                body["aluno"],
+                body["descricao"],
+                body["categoria"],
+                body["prioridade"]
+            )
+
+            if sucesso:
+                salvar_db(db)
+
+            resposta({
+                "sucesso": sucesso,
+                "mensagem": mensagem
+            })
+
+        # 🔹 LISTAR
+        elif comando == "listar":
+            sucesso, mensagem, ocorrencias = listar_ocorrencias(db, None)
+
+            resposta({
+                "sucesso": sucesso,
+                "dados": ocorrencias,
+                "mensagem": mensagem
+            })
+
+        # 🔹 ATUALIZAR STATUS
+        elif comando == "status":
+            body = json.loads(sys.argv[2])
+
+            sucesso, mensagem = atualizar_status_ocorrencia(
+                db,
+                None,
+                body["indice"],
+                body["status"]
+            )
+
+            if sucesso:
+                salvar_db(db)
+
+            resposta({
+                "sucesso": sucesso,
+                "mensagem": mensagem
+            })
+
+        else:
+            resposta({
+                "sucesso": False,
+                "mensagem": "Comando inválido"
+            })
+
+    except Exception as e:
+        resposta({
+            "sucesso": False,
+            "mensagem": str(e)
+        })
