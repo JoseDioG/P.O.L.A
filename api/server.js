@@ -73,3 +73,68 @@ app.patch("/occurrences/:id", async (req, res) => {
 app.listen(3000, () => {
   console.log("API rodando na porta 3000");
 });
+
+
+
+//aluno
+
+app.post("/students", async (req, res) => {
+  const { name, room } = req.body;
+
+  const resultado = await runPython(
+    "../backend/services/aluno_service.py",
+    [
+      "criar",
+      JSON.stringify({
+        nome: name,
+        sala: room
+      })
+    ]
+  );
+
+  res.json(resultado);
+});
+
+app.get("/students", async (req, res) => {
+  const resultado = await runPython(
+    "../backend/services/aluno_service.py",
+    ["listar"]
+  );
+
+  res.json(resultado);
+});
+
+app.patch("/students/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, room } = req.body;
+
+  const resultado = await runPython(
+    "../backend/services/aluno_service.py",
+    [
+      "editar",
+      JSON.stringify({
+        indice: Number(id),
+        nome: name,
+        sala: room
+      })
+    ]
+  );
+
+  res.json(resultado);
+});
+
+app.post("/students/view", async (req, res) => {
+  const { name } = req.body;
+
+  const resultado = await runPython(
+    "../backend/services/aluno_service.py",
+    [
+      "visualizar",
+      JSON.stringify({
+        nome: name
+      })
+    ]
+  );
+
+  res.json(resultado);
+});
