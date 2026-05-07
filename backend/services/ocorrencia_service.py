@@ -93,6 +93,10 @@ def obter_historico(db, usuario, indice):
     historico = ocorrencias[indice].get("historico", [])
     return True, "Historico carregado", list(historico)
 
+class UsuarioFake:
+    nome = "API"
+    papel = "ADM"
+
 def processador_ocorrencia(aluno, descricao):
     return f"Processado: {aluno} - {descricao}"
 
@@ -129,7 +133,7 @@ if __name__ == "__main__":
 
         # 🔹 LISTAR
         elif comando == "listar":
-            sucesso, mensagem, ocorrencias = listar_ocorrencias(db, None)
+            sucesso, mensagem, ocorrencias = listar_ocorrencias(db, UsuarioFake())
 
             resposta({
                 "sucesso": sucesso,
