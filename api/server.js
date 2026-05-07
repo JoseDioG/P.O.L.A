@@ -191,3 +191,56 @@ app.patch("/rooms/:id", async (req, res) => {
 
   res.json(resultado);
 });
+
+
+
+//nota
+
+
+
+
+app.post("/grades", async (req, res) => {
+  const { student, subject, value } = req.body;
+
+  const resultado = await runPython(
+    "../backend/services/nota_service.py",
+    [
+      "criar",
+      JSON.stringify({
+        aluno: student,
+        disciplina: subject,
+        valor: value
+      })
+    ]
+  );
+
+  res.json(resultado);
+});
+
+
+app.get("/grades", async (req, res) => {
+  const resultado = await runPython(
+    "../backend/services/nota_service.py",
+    ["listar"]
+  );
+
+  res.json(resultado);
+});
+
+
+
+app.post("/grades/student", async (req, res) => {
+  const { student } = req.body;
+
+  const resultado = await runPython(
+    "../backend/services/nota_service.py",
+    [
+      "listar",
+      JSON.stringify({
+        aluno: student
+      })
+    ]
+  );
+
+  res.json(resultado);
+});
