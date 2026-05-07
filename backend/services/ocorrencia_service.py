@@ -171,3 +171,33 @@ if __name__ == "__main__":
             "sucesso": False,
             "mensagem": str(e)
         })
+
+if comando == "criar":
+    body = json.loads(sys.argv[2])
+
+    sucesso, mensagem = criar_ocorrencia(
+        db,
+        usuario,
+        body["aluno"],
+        body["descricao"],
+        body["categoria"],
+        body["prioridade"]
+    )
+
+    if sucesso:
+        salvar_db(db)
+
+    resposta({
+        "sucesso": sucesso,
+        "mensagem": mensagem
+    })
+
+
+elif comando == "listar":
+    sucesso, mensagem, dados = listar_ocorrencias(db, usuario)
+
+    resposta({
+        "sucesso": sucesso,
+        "dados": dados,
+        "mensagem": mensagem
+    })
