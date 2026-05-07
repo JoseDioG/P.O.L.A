@@ -294,3 +294,65 @@ app.post("/absences/student", async (req, res) => {
 
   res.json(resultado);
 });
+
+
+//auth
+
+
+
+app.post("/auth/login", async (req, res) => {
+  const { name, role } = req.body;
+
+  const resultado = await runPython(
+    "../backend/services/auth_service.py",
+    [
+      "login",
+      JSON.stringify({
+        nome: name,
+        papel: role
+      })
+    ]
+  );
+
+  res.json(resultado);
+});
+
+
+app.post("/users", async (req, res) => {
+  const { name, role } = req.body;
+
+  const resultado = await runPython(
+    "../backend/services/auth_service.py",
+    [
+      "criar",
+      JSON.stringify({
+        nome: name,
+        papel: role
+      })
+    ]
+  );
+
+  res.json(resultado);
+});
+
+
+app.patch("/users/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, role } = req.body;
+
+  const resultado = await runPython(
+    "../backend/services/auth_service.py",
+    [
+      "editar",
+      JSON.stringify({
+        indice: Number(id),
+        nome: name,
+        papel: role
+      })
+    ]
+  );
+
+  res.json(resultado);
+});
+
+
