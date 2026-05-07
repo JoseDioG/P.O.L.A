@@ -13,25 +13,21 @@ app.post("/occurrences", async (req, res) => {
   try {
     const resultado = await runPython(
       "../backend/services/ocorrencia_service.py",
-      [student, description]
+      [
+        "criar",
+        JSON.stringify({
+          aluno: student,
+          descricao: description,
+          categoria: "DISCIPLINA",
+          prioridade: "ALTA"
+        })
+      ]
     );
 
-    const newOccurence = {
-      id: occurrences.length + 1,
-      student,
-      description,
-      status: "REGISTRADA",
-      processamento_python: resultado
-    };
-
-    occurrences.push(newOccurence);
-
-    res.json(newOccurence);
+    res.json(resultado);
 
   } catch (err) {
-    console.error(err);
-    console.error("ERRO PYTHON:", err);
-    res.status(500).json({ error: err });
+    res.status(500).json({ erro: err });
   }
 });
 
