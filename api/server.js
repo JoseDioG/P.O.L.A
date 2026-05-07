@@ -47,19 +47,27 @@ app.get("/occurrences", async (req, res) => {
 });
 
 // atualizar status
-app.patch("/occurrences/:id", (req, res) => {
+app.patch("/occurrences/:id", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  const occ = occurrences.find(o => o.id == id);
+  try {
+    const resultado = await runPython(
+      "../backend/services/ocorrencia_service.py",
+      [
+        "status",
+        JSON.stringify({
+          indice: Number(id),
+          status
+        })
+      ]
+    );
 
-  if (!occ) {
-    return res.status(404).json({ error: "Não encontrada" });
+    res.json(resultado);
+
+  } catch (err) {
+    res.status(500).json({ erro: err });
   }
-
-  occ.status = status;
-
-  res.json(occ);
 });
 
 app.listen(3000, () => {
