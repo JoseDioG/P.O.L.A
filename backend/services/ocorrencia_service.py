@@ -4,6 +4,7 @@ import tracemalloc
 from copy import deepcopy
 from datetime import datetime, timezone
 
+from utils.db import carregar_db, salvar_db
 from models.ocorrencia import Ocorrencia
 from services.aluno_service import buscar_aluno
 from utils.db import DB_LOCK, criar_db_vazio

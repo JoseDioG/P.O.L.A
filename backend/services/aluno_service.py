@@ -5,6 +5,10 @@ from services.sala_service import buscar_sala
 from utils.db import DB_LOCK
 from utils.validators import exigir_permissao, normalizar_texto
 
+import sys
+import json
+from utils.db import carregar_db, salvar_db
+
 
 def buscar_aluno(db, nome):
     if not isinstance(db, dict):
@@ -194,4 +198,97 @@ def visualizar_aluno(db, usuario, nome):
             "faltas": _listar_relacionados_por_aluno(db, "faltas", nome_aluno),
         }
 
-        return True, "Aluno carregado", dados
+    return True, "Aluno carregado", dados
+
+class UsuarioFake:
+    nome = "API"
+    papel = "ADM"
+
+
+def resposta(data):
+    print(json.dumps(data))
+
+
+if __name__ == "__main__":
+    db = carregar_db()
+    usuario = UsuarioFake()
+
+    try:
+        comando = sys.argv[1]
+
+        # ===== CRIAR =====
+        if comando == "criar":
+            body = json.loads(sys.argv[2])
+
+            sucesso, mensagem = criar_aluno(
+                db,
+                usuario,
+                body["nome"],
+                body["sala"]
+            )
+
+            if sucesso:
+                salvar_db(db)
+
+            resposta({
+                "sucesso": sucesso,
+                "mensagem": mensagem
+            })
+
+        # ===== LISTAR =====
+        elif comando == "listar":
+            sucesso, mensagem, dados = listar_alunos(db, usuario)
+
+            resposta({
+                "sucesso": sucesso,
+                "dados": dados,
+                "mensagem": mensagem
+            })
+
+        # ===== EDITAR =====
+        elif comando == "editar":
+            body = json.loads(sys.argv[2])
+
+            sucesso, mensagem = editar_aluno(
+                db,
+                usuario,
+                body["indice"],
+                body["nome"],
+                body["sala"]
+            )
+
+            if sucesso:
+                salvar_db(db)
+
+            resposta({
+                "sucesso": sucesso,
+                "mensagem": mensagem
+            })
+
+        # ===== VISUALIZAR =====
+        elif comando == "visualizar":
+            body = json.loads(sys.argv[2])
+
+            sucesso, mensagem, dados = visualizar_aluno(
+                db,
+                usuario,
+                body["nome"]
+            )
+
+            resposta({
+                "sucesso": sucesso,
+                "dados": dados,
+                "mensagem": mensagem
+            })
+
+        else:
+            resposta({
+                "sucesso": False,
+                "mensagem": "Comando inválido"
+            })
+
+    except Exception as e:
+        resposta({
+            "sucesso": False,
+            "mensagem": str(e)
+        })
