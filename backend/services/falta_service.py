@@ -8,6 +8,7 @@ from utils.validators import exigir_permissao
 import sys
 import json
 from utils.db import carregar_db, salvar_db
+from utils.sessions import criar_sessao
 
 def adicionar_falta(db, usuario, aluno, data):
     permitido, mensagem = exigir_permissao(usuario, "falta_criar")
@@ -57,17 +58,21 @@ def listar_faltas(db, usuario, aluno=None):
                 if falta.get("aluno") == aluno or falta.get("aluno_id") == aluno
             ]
 
-    return True, "Faltas listadas", faltas
+    return True, "Faltas listadas", deepcopy(faltas)
 
 
 
 class UsuarioFake:
+    id = "api"
     nome = "API"
     papel = "ADM"
 
+    def __init__(self):
+        criar_sessao(self)
+
 
 def resposta(data):
-    print(json.dumps(data))
+    print(json.dumps(data, ensure_ascii=False))
 
 
 if __name__ == "__main__":

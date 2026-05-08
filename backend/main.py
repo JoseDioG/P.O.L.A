@@ -54,7 +54,7 @@ def fazer_login(db):
     print("\nLOGIN")
     nome = entrada_texto_segura("Usuario: ")
     senha = entrada_senha_segura("Senha: ")
-    usuario, _, mensagem = auth_service.autenticar(db, nome, senha)
+    usuario, mensagem = auth_service.autenticar(db, nome, senha)
     if usuario is None:
         log_error(mensagem)
         return None

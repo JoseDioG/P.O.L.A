@@ -8,6 +8,7 @@ from utils.validators import exigir_permissao
 import sys
 import json
 from utils.db import carregar_db, salvar_db
+from utils.sessions import criar_sessao
 
 
 def adicionar_nota(db, usuario, aluno, disciplina, valor):
@@ -59,16 +60,20 @@ def listar_notas(db, usuario, aluno=None):
                 if nota.get("aluno") == aluno or nota.get("aluno_id") == aluno
             ]
 
-    return True, "Notas listadas", notas
+    return True, "Notas listadas", deepcopy(notas)
 
 
 class UsuarioFake:
+    id = "api"
     nome = "API"
     papel = "ADM"
 
+    def __init__(self):
+        criar_sessao(self)
+
 
 def resposta(data):
-    print(json.dumps(data))
+    print(json.dumps(data, ensure_ascii=False))
 
 
 if __name__ == "__main__":

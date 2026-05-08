@@ -1,3 +1,5 @@
+import json
+import sys
 import time
 import tracemalloc
 
@@ -8,6 +10,7 @@ from utils.db import carregar_db, salvar_db
 from models.ocorrencia import Ocorrencia
 from services.aluno_service import buscar_aluno
 from utils.db import DB_LOCK, criar_db_vazio
+from utils.sessions import criar_sessao
 from utils.validators import (
     CATEGORIAS,
     PRIORIDADES,
@@ -186,6 +189,103 @@ def obter_historico(db, usuario, indice):
             return False, "Historico da ocorrencia invalido", []
 
         return True, "Historico carregado", deepcopy(historico)
+
+
+class UsuarioFake:
+    id = "api"
+    nome = "API"
+    papel = "ADM"
+
+    def __init__(self):
+        criar_sessao(self)
+
+
+def resposta(data):
+    print(json.dumps(data, ensure_ascii=False))
+
+
+def _executar_cli():
+    db = carregar_db()
+    usuario = UsuarioFake()
+    comando = sys.argv[1]
+
+    if comando == "criar":
+        body = json.loads(sys.argv[2])
+        sucesso, mensagem = criar_ocorrencia(
+            db,
+            usuario,
+            body["aluno"],
+            body["descricao"],
+            body["categoria"],
+            body["prioridade"],
+        )
+
+        if sucesso:
+            salvar_db(db)
+
+        resposta({
+            "sucesso": sucesso,
+            "mensagem": mensagem
+        })
+
+    elif comando == "listar":
+        if len(sys.argv) > 2:
+            body = json.loads(sys.argv[2])
+            aluno = body.get("aluno")
+            if aluno:
+                sucesso, mensagem, dados = listar_ocorrencias_aluno(db, usuario, aluno)
+            else:
+                sucesso, mensagem, dados = listar_ocorrencias(db, usuario)
+        else:
+            sucesso, mensagem, dados = listar_ocorrencias(db, usuario)
+
+        resposta({
+            "sucesso": sucesso,
+            "dados": dados,
+            "mensagem": mensagem
+        })
+
+    elif comando == "status":
+        body = json.loads(sys.argv[2])
+        sucesso, mensagem = atualizar_status_ocorrencia(
+            db,
+            usuario,
+            body["indice"],
+            body["status"],
+        )
+
+        if sucesso:
+            salvar_db(db)
+
+        resposta({
+            "sucesso": sucesso,
+            "mensagem": mensagem
+        })
+
+    elif comando == "historico":
+        body = json.loads(sys.argv[2])
+        sucesso, mensagem, dados = obter_historico(db, usuario, body["indice"])
+        resposta({
+            "sucesso": sucesso,
+            "dados": dados,
+            "mensagem": mensagem
+        })
+
+    else:
+        resposta({
+            "sucesso": False,
+            "mensagem": "Comando invalido"
+        })
+
+
+if __name__ == "__main__":
+    try:
+        _executar_cli()
+    except Exception as e:
+        resposta({
+            "sucesso": False,
+            "mensagem": str(e)
+        })
 
 
 def executar_teste_estresse():

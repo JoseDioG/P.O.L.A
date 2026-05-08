@@ -57,31 +57,31 @@ def autenticar(db, nome, senha):
     nome = normalizar_texto(nome)
 
     if not nome:
-        return None, None, "Usuario invalido"
+        return None, "Usuario invalido"
 
     try:
         with DB_LOCK:
             _, usuario = buscar_usuario(db, nome)
             if usuario is None:
-                return None, None, "Acesso negado: usuario nao cadastrado"
+                return None, "Acesso negado: usuario nao cadastrado"
 
             senha_hash = usuario.get("senha_hash") or usuario.get("password_hash")
             if not verificar_senha(senha, senha_hash):
-                return None, None, "Acesso negado: senha invalida"
+                return None, "Acesso negado: senha invalida"
 
             contexto = Usuario.de_dict(usuario)
     except (AttributeError, ValueError, TypeError):
-        return None, None, "Acesso negado: usuario invalido"
+        return None, "Acesso negado: usuario invalido"
 
-    token = criar_sessao(contexto)
-    return contexto, token, "Login autorizado"
+    criar_sessao(contexto)
+    return contexto, "Login autorizado"
 
 
 def login(db, username, senha):
-    usuario, token, mensagem = autenticar(db, username, senha)
+    usuario, mensagem = autenticar(db, username, senha)
     if usuario is None:
         return False, mensagem, None, None
-    return True, mensagem, token, usuario
+    return True, mensagem, usuario.sessao_token, usuario
 
 
 def logout(usuario_ou_token):
@@ -211,12 +211,16 @@ def editar_usuario(db, solicitante, indice, novo_nome, novo_papel, nova_senha=No
 
 
 class UsuarioFake:
+    id = "api"
     nome = "API"
     papel = "ADM"
 
+    def __init__(self):
+        criar_sessao(self)
+
 
 def resposta(data):
-    print(json.dumps(data))
+    print(json.dumps(data, ensure_ascii=False))
 
 
 if __name__ == "__main__":
@@ -233,12 +237,17 @@ if __name__ == "__main__":
             usuario, mensagem = autenticar(
                 db,
                 body["nome"],
-                body["papel"]
+                body.get("senha") or body.get("password")
             )
 
             resposta({
                 "sucesso": usuario is not None,
-                "usuario": usuario.__dict__ if usuario else None,
+                "usuario": {
+                    "id": usuario.id,
+                    "nome": usuario.nome,
+                    "papel": usuario.papel,
+                    "token": usuario.sessao_token
+                } if usuario else None,
                 "mensagem": mensagem
             })
 
@@ -260,7 +269,8 @@ if __name__ == "__main__":
                 db,
                 solicitante,
                 body["nome"],
-                body["papel"]
+                body["papel"],
+                body.get("senha") or body.get("password")
             )
 
             if sucesso:
@@ -280,7 +290,8 @@ if __name__ == "__main__":
                 solicitante,
                 body["indice"],
                 body["nome"],
-                body["papel"]
+                body["papel"],
+                body.get("senha") or body.get("password")
             )
 
             if sucesso:
