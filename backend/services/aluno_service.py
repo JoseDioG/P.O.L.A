@@ -1,11 +1,12 @@
-from copy import deepcopy
-
 from models.aluno import Aluno
 from models.sala import Sala
 from services.sala_service import buscar_sala
+<<<<<<< HEAD
+=======
 from utils.cli import autenticar_solicitante, parse_comando_json
 from utils.db import DB_LOCK, SALA_PADRAO
 from utils.responses import imprimir_resposta, resposta_erro, resposta_servico
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 from utils.validators import exigir_permissao, normalizar_texto
 
 import sys
@@ -13,68 +14,18 @@ from utils.db import carregar_db, salvar_db
 
 
 def buscar_aluno(db, nome):
-    if not isinstance(db, dict):
-        return None, None
-
     nome = normalizar_texto(nome).lower()
-    alunos = db.get("alunos", [])
-    if not isinstance(alunos, list):
-        return None, None
-
-    for indice, aluno in enumerate(alunos):
-        if not isinstance(aluno, dict):
-            continue
+    for indice, aluno in enumerate(db.get("alunos", [])):
         if normalizar_texto(aluno.get("nome", "")).lower() == nome:
             return indice, aluno
     return None, None
-
-
-def buscar_aluno_por_id(db, id):
-    if not isinstance(db, dict):
-        return None, None
-
-    if not id:
-        return None, None
-    alunos = db.get("alunos", [])
-    if not isinstance(alunos, list):
-        return None, None
-
-    for indice, aluno in enumerate(alunos):
-        if not isinstance(aluno, dict):
-            continue
-        if aluno.get("id") == id:
-            return indice, aluno
-    return None, None
-
-
-def buscar_aluno_por_id_ou_nome(db, id=None, nome=None):
-    indice, aluno = buscar_aluno_por_id(db, id)
-    if aluno is not None:
-        return indice, aluno
-    return buscar_aluno(db, nome)
-
-
-def _listar_relacionados_por_aluno(db, chave, nome_aluno):
-    itens = db.get(chave, []) if isinstance(db, dict) else []
-    if not isinstance(itens, list):
-        return []
-
-    return [
-        deepcopy(item) for item in itens
-        if isinstance(item, dict) and item.get("aluno") == nome_aluno
-    ]
 
 
 def listar_alunos(db, usuario):
     permitido, mensagem = exigir_permissao(usuario, "aluno_visualizar")
     if not permitido:
         return False, mensagem, []
-
-    with DB_LOCK:
-        alunos = db.get("alunos", []) if isinstance(db, dict) else []
-        if not isinstance(alunos, list) or not all(isinstance(aluno, dict) for aluno in alunos):
-            return False, "Lista de alunos invalida", []
-        return True, "Alunos listados", deepcopy(alunos)
+    return True, "Alunos listados", list(db.get("alunos", []))
 
 
 def listar_alunos_por_sala(db, usuario, sala):
@@ -82,17 +33,9 @@ def listar_alunos_por_sala(db, usuario, sala):
     if not permitido:
         return False, mensagem, []
 
-    with DB_LOCK:
-        alunos_db = db.get("alunos", []) if isinstance(db, dict) else []
-        if not isinstance(alunos_db, list) or not all(isinstance(aluno, dict) for aluno in alunos_db):
-            return False, "Lista de alunos invalida", []
-
-        sala = normalizar_texto(sala)
-        alunos = [
-            aluno for aluno in alunos_db
-            if aluno.get("sala") == sala or aluno.get("sala_id") == sala
-        ]
-        return True, "Alunos da sala listados", deepcopy(alunos)
+    sala = normalizar_texto(sala)
+    alunos = [aluno for aluno in db.get("alunos", []) if aluno.get("sala") == sala]
+    return True, "Alunos da sala listados", alunos
 
 
 def criar_aluno(db, usuario, nome, sala):
@@ -100,31 +43,19 @@ def criar_aluno(db, usuario, nome, sala):
     if not permitido:
         return False, mensagem
 
-    if not isinstance(db, dict):
-        return False, "Banco de dados invalido"
+    if buscar_aluno(db, nome)[1] is not None:
+        return False, "Aluno ja cadastrado"
 
-    with DB_LOCK:
-        alunos = db.get("alunos")
-        if alunos is None:
-            db["alunos"] = []
-            alunos = db["alunos"]
-        if not isinstance(alunos, list):
-            return False, "Lista de alunos invalida"
+    if buscar_sala(db, sala)[1] is None:
+        return False, "Sala nao cadastrada"
 
-        if buscar_aluno(db, nome)[1] is not None:
-            return False, "Aluno ja cadastrado"
+    try:
+        aluno = Aluno(nome, sala).para_dict()
+    except ValueError as erro:
+        return False, str(erro)
 
-        _, sala_db = buscar_sala(db, sala)
-        if sala_db is None:
-            return False, "Sala nao cadastrada"
-
-        try:
-            aluno = Aluno(nome, sala_db["nome"], sala_id=sala_db.get("id")).para_dict()
-        except ValueError as erro:
-            return False, str(erro)
-
-        alunos.append(aluno)
-        return True, "Aluno criado"
+    db["alunos"].append(aluno)
+    return True, "Aluno criado"
 
 
 def editar_aluno(db, usuario, indice, novo_nome, nova_sala):
@@ -132,54 +63,38 @@ def editar_aluno(db, usuario, indice, novo_nome, nova_sala):
     if not permitido:
         return False, mensagem
 
-    if not isinstance(db, dict):
-        return False, "Banco de dados invalido"
+    alunos = db.get("alunos", [])
+    if not isinstance(indice, int) or not 0 <= indice < len(alunos):
+        return False, "Aluno selecionado invalido"
 
-    with DB_LOCK:
-        alunos = db.get("alunos", [])
-        if not isinstance(alunos, list):
-            return False, "Lista de alunos invalida"
-        if not isinstance(indice, int) or not 0 <= indice < len(alunos):
-            return False, "Aluno selecionado invalido"
-        if not isinstance(alunos[indice], dict):
-            return False, "Registro de aluno invalido"
+    if buscar_sala(db, nova_sala)[1] is None:
+        return False, "Sala nao cadastrada"
 
-        _, sala_db = buscar_sala(db, nova_sala)
-        if sala_db is None:
-            return False, "Sala nao cadastrada"
+    existente_indice, _ = buscar_aluno(db, novo_nome)
+    if existente_indice is not None and existente_indice != indice:
+        return False, "Outro aluno ja usa esse nome"
 
-        existente_indice, _ = buscar_aluno(db, novo_nome)
-        if existente_indice is not None and existente_indice != indice:
-            return False, "Outro aluno ja usa esse nome"
+    nome_antigo = alunos[indice]["nome"]
 
-        nome_antigo = alunos[indice]["nome"]
-        id_aluno = alunos[indice].get("id")
+    try:
+        aluno = Aluno(novo_nome, nova_sala).para_dict()
+    except ValueError as erro:
+        return False, str(erro)
 
-        try:
-            aluno = Aluno(
-                novo_nome,
-                sala_db["nome"],
-                id=id_aluno,
-                sala_id=sala_db.get("id"),
-            ).para_dict()
-        except ValueError as erro:
-            return False, str(erro)
+    alunos[indice] = aluno
 
-        alunos[indice] = aluno
+    if nome_antigo != aluno["nome"]:
+        for ocorrencia in db.get("ocorrencias", []):
+            if ocorrencia.get("aluno") == nome_antigo:
+                ocorrencia["aluno"] = aluno["nome"]
+        for nota in db.get("notas", []):
+            if nota.get("aluno") == nome_antigo:
+                nota["aluno"] = aluno["nome"]
+        for falta in db.get("faltas", []):
+            if falta.get("aluno") == nome_antigo:
+                falta["aluno"] = aluno["nome"]
 
-        if nome_antigo != aluno["nome"]:
-            for chave in ("ocorrencias", "notas", "faltas"):
-                itens = db.get(chave, [])
-                if not isinstance(itens, list):
-                    continue
-                for item in itens:
-                    if not isinstance(item, dict):
-                        continue
-                    if item.get("aluno_id") == id_aluno or item.get("aluno") == nome_antigo:
-                        item["aluno"] = aluno["nome"]
-                        item["aluno_id"] = id_aluno
-
-        return True, "Aluno atualizado"
+    return True, "Aluno atualizado"
 
 
 def _garantir_sala_padrao(db):
@@ -262,24 +177,42 @@ def visualizar_aluno(db, usuario, nome):
     if not permitido:
         return False, mensagem, None
 
-    with DB_LOCK:
-        _, aluno = buscar_aluno(db, nome)
-        if aluno is None:
-            return False, "Aluno nao encontrado", None
+    _, aluno = buscar_aluno(db, nome)
+    if aluno is None:
+        return False, "Aluno nao encontrado", None
 
-        nome_aluno = aluno["nome"]
-        dados = {
-            "aluno": deepcopy(aluno),
-            "ocorrencias": _listar_relacionados_por_aluno(db, "ocorrencias", nome_aluno),
-            "notas": _listar_relacionados_por_aluno(db, "notas", nome_aluno),
-            "faltas": _listar_relacionados_por_aluno(db, "faltas", nome_aluno),
-        }
+    nome_aluno = aluno["nome"]
+    dados = {
+        "aluno": aluno,
+        "ocorrencias": [
+            item for item in db.get("ocorrencias", []) if item.get("aluno") == nome_aluno
+        ],
+        "notas": [
+            item for item in db.get("notas", []) if item.get("aluno") == nome_aluno
+        ],
+        "faltas": [
+            item for item in db.get("faltas", []) if item.get("aluno") == nome_aluno
+        ],
+    }
 
     return True, "Aluno carregado", dados
 
+<<<<<<< HEAD
+class UsuarioFake:
+    nome = "API"
+    papel = "ADM"
+
+
+def resposta(data):
+    print(json.dumps(data))
+
+
+if __name__ == "__main__":
+=======
 
 def _executar_cli(argv=None):
     argv = sys.argv if argv is None else argv
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
     db = carregar_db()
     comando, body, erro = parse_comando_json(argv)
 

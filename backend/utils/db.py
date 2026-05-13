@@ -1,43 +1,31 @@
 import json
 import os
 import tempfile
-import threading
 from datetime import datetime
 from pathlib import Path
+
 from models.aluno import Aluno
 from models.falta import Falta
 from models.nota import Nota
 from models.ocorrencia import Ocorrencia
 from models.sala import Sala
 from models.usuario import Usuario
+<<<<<<< HEAD
+=======
 from utils.ids import gerar_id, id_valido
 from utils.security import gerar_senha_hash, senha_inicial_padrao
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 from utils.validators import log_error, log_info, normalizar_texto
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-ARQUIVO_DB_PADRAO = BASE_DIR / "banco_dados.json"
-ARQUIVO_DB = Path(os.getenv("POLAR_DB_PATH") or ARQUIVO_DB_PADRAO)
+ARQUIVO_DB = BASE_DIR / "banco_dados.json"
 SALA_PADRAO = "Sem sala"
 USUARIO_BOOTSTRAP = {"nome": "admin", "papel": "ADM"}
-DB_LOCK = threading.RLock()
-
-
-def resolver_caminho_db(caminho=None):
-    return Path(caminho or os.getenv("POLAR_DB_PATH") or ARQUIVO_DB_PADRAO)
-
-
-def criar_usuario_bootstrap():
-    return Usuario(
-        USUARIO_BOOTSTRAP["nome"],
-        USUARIO_BOOTSTRAP["papel"],
-        senha_hash=gerar_senha_hash(senha_inicial_padrao()),
-        precisa_trocar_senha=True,
-    ).para_dict()
 
 
 def criar_db_vazio(incluir_admin=True):
-    usuarios = [criar_usuario_bootstrap()] if incluir_admin else []
+    usuarios = [dict(USUARIO_BOOTSTRAP)] if incluir_admin else []
     return {
         "usuarios": usuarios,
         "alunos": [],
@@ -58,6 +46,8 @@ def _adicionar_unico_por_nome(lista, item):
     return True
 
 
+<<<<<<< HEAD
+=======
 def _buscar_por_nome(lista, nome):
     nome = normalizar_texto(nome).lower()
     for item in lista:
@@ -101,6 +91,7 @@ def _garantir_ids_unicos(lista):
     return alterado
 
 
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 def _normalizar_usuarios(dados):
     usuarios = []
     alterado = False
@@ -112,16 +103,11 @@ def _normalizar_usuarios(dados):
             alterado = True
             continue
 
-        if not usuario.get("senha_hash"):
-            usuario["senha_hash"] = gerar_senha_hash(senha_inicial_padrao())
-            usuario["precisa_trocar_senha"] = True
-            alterado = True
-
         if not _adicionar_unico_por_nome(usuarios, usuario):
             alterado = True
 
     if not any(usuario["papel"] == "ADM" for usuario in usuarios):
-        usuarios.insert(0, criar_usuario_bootstrap())
+        usuarios.insert(0, dict(USUARIO_BOOTSTRAP))
         alterado = True
         log_info("Usuario bootstrap criado: admin / ADM")
 
@@ -147,7 +133,7 @@ def _normalizar_salas(dados):
 
 def _garantir_sala(salas, nome):
     nome = normalizar_texto(nome) or SALA_PADRAO
-    if _buscar_por_nome(salas, nome) is None:
+    if not any(sala["nome"].lower() == nome.lower() for sala in salas):
         salas.append(Sala(nome).para_dict())
         return True
     return False
@@ -164,20 +150,9 @@ def _normalizar_alunos(dados, salas):
 
         sala = normalizar_texto(item.get("sala", "")) or SALA_PADRAO
         alterado = _garantir_sala(salas, sala) or alterado
-        sala_db = _buscar_por_id_ou_nome(salas, item.get("sala_id"), sala)
-        if sala_db is None:
-            sala_db = _buscar_por_nome(salas, sala) or _buscar_por_nome(salas, SALA_PADRAO) or {
-                "nome": SALA_PADRAO,
-                "id": None,
-            }
 
         try:
-            aluno = Aluno(
-                item.get("nome", ""),
-                sala_db["nome"],
-                id=item.get("id"),
-                sala_id=sala_db.get("id"),
-            ).para_dict()
+            aluno = Aluno(item.get("nome", ""), sala).para_dict()
         except ValueError:
             alterado = True
             continue
@@ -197,13 +172,11 @@ def _garantir_aluno(alunos, salas, nome):
         return False
 
     _garantir_sala(salas, SALA_PADRAO)
-    sala = _buscar_por_nome(salas, SALA_PADRAO)
-    sala_id = sala.get("id") if sala else None
-    alunos.append(Aluno(nome, SALA_PADRAO, sala_id=sala_id).para_dict())
+    alunos.append(Aluno(nome, SALA_PADRAO).para_dict())
     return True
 
 
-def _normalizar_ocorrencias(dados, alunos, salas, usuarios):
+def _normalizar_ocorrencias(dados, alunos, salas):
     ocorrencias = []
     alterado = False
 
@@ -215,20 +188,6 @@ def _normalizar_ocorrencias(dados, alunos, salas, usuarios):
             continue
 
         alterado = _garantir_aluno(alunos, salas, ocorrencia["aluno"]) or alterado
-        aluno = _buscar_por_id_ou_nome(alunos, ocorrencia.get("aluno_id"), ocorrencia["aluno"])
-        if aluno:
-            ocorrencia["aluno"] = aluno["nome"]
-            ocorrencia["aluno_id"] = aluno.get("id")
-
-        usuario = _buscar_por_id_ou_nome(
-            usuarios,
-            ocorrencia.get("criado_por_id"),
-            ocorrencia.get("criado_por"),
-        )
-        if usuario:
-            ocorrencia["criado_por"] = usuario["nome"]
-            ocorrencia["criado_por_id"] = usuario.get("id")
-
         ocorrencias.append(ocorrencia)
 
     return ocorrencias, alterado
@@ -246,10 +205,6 @@ def _normalizar_notas(dados, alunos, salas):
             continue
 
         alterado = _garantir_aluno(alunos, salas, nota["aluno"]) or alterado
-        aluno = _buscar_por_id_ou_nome(alunos, nota.get("aluno_id"), nota["aluno"])
-        if aluno:
-            nota["aluno"] = aluno["nome"]
-            nota["aluno_id"] = aluno.get("id")
         notas.append(nota)
 
     return notas, alterado
@@ -267,10 +222,6 @@ def _normalizar_faltas(dados, alunos, salas):
             continue
 
         alterado = _garantir_aluno(alunos, salas, falta["aluno"]) or alterado
-        aluno = _buscar_por_id_ou_nome(alunos, falta.get("aluno_id"), falta["aluno"])
-        if aluno:
-            falta["aluno"] = aluno["nome"]
-            falta["aluno_id"] = aluno.get("id")
         faltas.append(falta)
 
     return faltas, alterado
@@ -294,12 +245,7 @@ def normalizar_db(dados):
     alterado = alterado or mudou
     alterado = _garantir_ids_unicos(alunos) or alterado
 
-    ocorrencias, mudou = _normalizar_ocorrencias(
-        dados.get("ocorrencias", []),
-        alunos,
-        salas,
-        usuarios,
-    )
+    ocorrencias, mudou = _normalizar_ocorrencias(dados.get("ocorrencias", []), alunos, salas)
     alterado = alterado or mudou
     alterado = _garantir_ids_unicos(ocorrencias) or alterado
 
@@ -323,19 +269,29 @@ def normalizar_db(dados):
     return normalizado, alterado or normalizado != dados
 
 
-def salvar_db(dados, caminho=None):
-    with DB_LOCK:
-        caminho = resolver_caminho_db(caminho)
-        dados_normalizados, _ = normalizar_db(dados)
-        caminho.parent.mkdir(parents=True, exist_ok=True)
+def salvar_db(dados, caminho=ARQUIVO_DB):
+    caminho = Path(caminho)
+    dados_normalizados, _ = normalizar_db(dados)
+    caminho.parent.mkdir(parents=True, exist_ok=True)
 
-        fd, temporario = tempfile.mkstemp(
-            prefix=".polar-",
-            suffix=".tmp",
-            dir=str(caminho.parent),
-            text=True,
-        )
+    fd, temporario = tempfile.mkstemp(
+        prefix=".polar-",
+        suffix=".tmp",
+        dir=str(caminho.parent),
+        text=True,
+    )
 
+<<<<<<< HEAD
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as arquivo:
+            json.dump(dados_normalizados, arquivo, ensure_ascii=False, indent=2)
+            arquivo.write("\n")
+        os.replace(temporario, caminho)
+    except Exception:
+        if os.path.exists(temporario):
+            os.remove(temporario)
+        raise
+=======
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as arquivo:
                 json.dump(dados_normalizados, arquivo, ensure_ascii=False, indent=2)
@@ -347,6 +303,7 @@ def salvar_db(dados, caminho=None):
             if os.path.exists(temporario):
                 os.remove(temporario)
             raise
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 
 
 def _recriar_db_corrompido(caminho):
@@ -364,27 +321,26 @@ def _recriar_db_corrompido(caminho):
     return db
 
 
-def carregar_db(caminho=None):
-    with DB_LOCK:
-        caminho = resolver_caminho_db(caminho)
+def carregar_db(caminho=ARQUIVO_DB):
+    caminho = Path(caminho)
 
-        if not caminho.exists():
-            db = criar_db_vazio()
-            salvar_db(db, caminho)
-            return db
+    if not caminho.exists():
+        db = criar_db_vazio()
+        salvar_db(db, caminho)
+        return db
 
-        try:
-            with open(caminho, "r", encoding="utf-8") as arquivo:
-                dados = json.load(arquivo)
-        except json.JSONDecodeError:
-            return _recriar_db_corrompido(caminho)
-        except OSError as erro:
-            log_error(f"Nao foi possivel ler o banco de dados: {erro}")
-            return criar_db_vazio()
+    try:
+        with open(caminho, "r", encoding="utf-8") as arquivo:
+            dados = json.load(arquivo)
+    except json.JSONDecodeError:
+        return _recriar_db_corrompido(caminho)
+    except OSError as erro:
+        log_error(f"Nao foi possivel ler o banco de dados: {erro}")
+        return criar_db_vazio()
 
-        normalizado, alterado = normalizar_db(dados)
-        if alterado:
-            log_info("Banco normalizado para a estrutura academica atual")
-            salvar_db(normalizado, caminho)
+    normalizado, alterado = normalizar_db(dados)
+    if alterado:
+        log_info("Banco normalizado para a estrutura academica atual")
+        salvar_db(normalizado, caminho)
 
-        return normalizado
+    return normalizado

@@ -1,28 +1,39 @@
+<<<<<<< HEAD
+import time
+import tracemalloc
+import sys
+import json
+=======
 import sys
 import time
 import tracemalloc
 
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 
 from utils.db import carregar_db, salvar_db
 from models.ocorrencia import Ocorrencia
 from services.aluno_service import buscar_aluno
+<<<<<<< HEAD
+from utils.db import criar_db_vazio
+=======
 from utils.cli import autenticar_solicitante, parse_comando_json
 from utils.db import DB_LOCK, criar_db_vazio
 from utils.ids import garantir_id
 from utils.responses import imprimir_resposta, resposta_erro, resposta_servico
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 from utils.validators import (
     CATEGORIAS,
     PRIORIDADES,
     exigir_permissao,
     log_info,
-    normalizar_texto,
     validar_transicao_status,
-    validar_status,
 )
 
 
+<<<<<<< HEAD
+=======
 SPAM_DUPLICADO_SEGUNDOS = 300
 SPAM_JANELA_SEGUNDOS = 60
 SPAM_LIMITE_POR_USUARIO = 60
@@ -134,19 +145,12 @@ def _validar_spam_ocorrencia(ocorrencias, nova_ocorrencia, usuario):
     return True, "Ocorrencia permitida"
 
 
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 def listar_ocorrencias(db, usuario):
     permitido, mensagem = exigir_permissao(usuario, "ocorrencia_visualizar")
     if not permitido:
         return False, mensagem, []
-
-    with DB_LOCK:
-        ocorrencias, erro = _obter_ocorrencias(db)
-        if erro:
-            return False, erro, []
-        if ocorrencias is None or not all(_registro_ocorrencia_valido(ocorrencia) for ocorrencia in ocorrencias):
-            return False, "Registro de ocorrencia invalido", []
-
-        return True, "Ocorrencias listadas", _copiar_ocorrencias(ocorrencias)
+    return True, "Ocorrencias listadas", list(db.get("ocorrencias", []))
 
 
 def listar_ocorrencias_aluno(db, usuario, aluno):
@@ -154,22 +158,11 @@ def listar_ocorrencias_aluno(db, usuario, aluno):
     if not permitido:
         return False, mensagem, []
 
-    with DB_LOCK:
-        ocorrencias_db, erro = _obter_ocorrencias(db)
-        if erro:
-            return False, erro, []
-        if ocorrencias_db is None or not all(_registro_ocorrencia_valido(ocorrencia) for ocorrencia in ocorrencias_db):
-            return False, "Registro de ocorrencia invalido", []
-
-        aluno_nome = normalizar_texto(aluno).lower()
-        ocorrencias = [
-            ocorrencia for ocorrencia in ocorrencias_db
-            if (
-                normalizar_texto(ocorrencia.get("aluno", "")).lower() == aluno_nome
-                or ocorrencia.get("aluno_id") == aluno
-            )
-        ]
-        return True, "Ocorrencias do aluno listadas", _copiar_ocorrencias(ocorrencias)
+    ocorrencias = [
+        ocorrencia for ocorrencia in db.get("ocorrencias", [])
+        if ocorrencia.get("aluno") == aluno
+    ]
+    return True, "Ocorrencias do aluno listadas", ocorrencias
 
 
 def criar_ocorrencia(db, usuario, aluno, descricao, categoria, prioridade):
@@ -177,15 +170,24 @@ def criar_ocorrencia(db, usuario, aluno, descricao, categoria, prioridade):
     if not permitido:
         return False, mensagem
 
-    with DB_LOCK:
-        ocorrencias, erro = _obter_ocorrencias(db, criar=True)
-        if erro or ocorrencias is None:
-            return False, erro or "Erro ao obter ocorrencias"
+    if buscar_aluno(db, aluno)[1] is None:
+        return False, "Aluno nao cadastrado"
 
-        _, aluno_db = buscar_aluno(db, aluno)
-        if aluno_db is None:
-            return False, "Aluno nao cadastrado"
+    try:
+        ocorrencia = Ocorrencia(
+            aluno=aluno,
+            descricao=descricao,
+            categoria=categoria,
+            prioridade=prioridade,
+            criado_por=usuario.nome,
+        ).para_dict()
+    except ValueError as erro:
+        return False, str(erro)
 
+<<<<<<< HEAD
+    db["ocorrencias"].append(ocorrencia)
+    return True, "Ocorrencia registrada"
+=======
         try:
             ocorrencia = Ocorrencia(
                 aluno=aluno_db["nome"],
@@ -210,6 +212,7 @@ def criar_ocorrencia(db, usuario, aluno, descricao, categoria, prioridade):
 
         ocorrencias.append(nova_ocorrencia)
         return True, "Ocorrencia registrada"
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 
 
 def atualizar_status_ocorrencia(db, usuario, indice, novo_status):
@@ -217,14 +220,24 @@ def atualizar_status_ocorrencia(db, usuario, indice, novo_status):
     if not permitido:
         return False, mensagem
 
-    with DB_LOCK:
-        ocorrencias, erro = _obter_ocorrencias(db)
-        if erro or ocorrencias is None:
-            return False, erro or "Erro ao obter ocorrencias"
+    ocorrencias = db.get("ocorrencias", [])
+    if not isinstance(indice, int) or not 0 <= indice < len(ocorrencias):
+        return False, "Ocorrencia selecionada invalida"
 
-        if not isinstance(indice, int) or not 0 <= indice < len(ocorrencias):
-            return False, "Ocorrencia selecionada invalida"
+    registro = ocorrencias[indice]
+    status_atual = registro.get("status")
+    valido, mensagem = validar_transicao_status(usuario.papel, status_atual, novo_status)
+    if not valido:
+        return False, mensagem
 
+<<<<<<< HEAD
+    registro["status"] = novo_status
+    registro.setdefault("historico", []).append({
+        "acao": f"Alterado por {usuario.nome}",
+        "status": novo_status,
+    })
+    return True, "Status atualizado"
+=======
         registro = ocorrencias[indice]
         if not _registro_ocorrencia_valido(registro):
             return False, "Registro de ocorrencia invalido"
@@ -250,6 +263,7 @@ def atualizar_status_ocorrencia(db, usuario, indice, novo_status):
         registro["status"] = novo_status
         registro["atualizado_em"] = agora
         return True, "Status atualizado"
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 
 
 def encerrar_ocorrencia(db, usuario, indice):
@@ -261,25 +275,93 @@ def obter_historico(db, usuario, indice):
     if not permitido:
         return False, mensagem, []
 
-    with DB_LOCK:
-        ocorrencias, erro = _obter_ocorrencias(db)
-        if erro or ocorrencias is None:
-            return False, erro or "Erro ao obter ocorrencias", []
+    ocorrencias = db.get("ocorrencias", [])
+    if not isinstance(indice, int) or not 0 <= indice < len(ocorrencias):
+        return False, "Ocorrencia selecionada invalida", []
 
-        if not isinstance(indice, int) or not 0 <= indice < len(ocorrencias):
-            return False, "Ocorrencia selecionada invalida", []
+    historico = ocorrencias[indice].get("historico", [])
+    return True, "Historico carregado", list(historico)
 
-        registro = ocorrencias[indice]
-        if not _registro_ocorrencia_valido(registro):
-            return False, "Registro de ocorrencia invalido", []
+<<<<<<< HEAD
+class UsuarioFake:
+    nome = "API"
+    papel = "ADM"
 
-        historico = registro.get("historico", [])
-        if not _historico_valido(historico):
-            return False, "Historico da ocorrencia invalido", []
+def processador_ocorrencia(aluno, descricao):
+    return f"Processado: {aluno} - {descricao}"
 
-        return True, "Historico carregado", deepcopy(historico)
+def resposta(data):
+    print(json.dumps(data))
 
 
+if __name__ == "__main__":
+    db = carregar_db()
+
+    try:
+        comando = sys.argv[1]
+
+        # 🔹 CRIAR OCORRÊNCIA
+        if comando == "criar":
+            body = json.loads(sys.argv[2])
+
+            sucesso, mensagem = criar_ocorrencia(
+                db,
+                None,  # depois você pode colocar usuário real
+                body["aluno"],
+                body["descricao"],
+                body["categoria"],
+                body["prioridade"]
+            )
+
+            if sucesso:
+                salvar_db(db)
+
+            resposta({
+                "sucesso": sucesso,
+                "mensagem": mensagem
+            })
+
+        # 🔹 LISTAR
+        elif comando == "listar":
+            sucesso, mensagem, ocorrencias = listar_ocorrencias(db, UsuarioFake())
+
+            resposta({
+                "sucesso": sucesso,
+                "dados": ocorrencias,
+                "mensagem": mensagem
+            })
+
+        # 🔹 ATUALIZAR STATUS
+        elif comando == "status":
+            body = json.loads(sys.argv[2])
+
+            sucesso, mensagem = atualizar_status_ocorrencia(
+                db,
+                None,
+                body["indice"],
+                body["status"]
+            )
+
+            if sucesso:
+                salvar_db(db)
+
+            resposta({
+                "sucesso": sucesso,
+                "mensagem": mensagem
+            })
+
+        else:
+            resposta({
+                "sucesso": False,
+                "mensagem": "Comando inválido"
+            })
+
+    except Exception as e:
+        resposta({
+            "sucesso": False,
+            "mensagem": str(e)
+        })
+=======
 
 def _executar_cli(argv=None):
     argv = sys.argv if argv is None else argv
@@ -339,97 +421,34 @@ def _executar_cli(argv=None):
 
 if __name__ == "__main__":
     imprimir_resposta(_executar_cli())
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 
+if comando == "criar":
+    body = json.loads(sys.argv[2])
 
-def executar_teste_estresse():
-    from models.aluno import Aluno
-    from models.usuario import Usuario
-    from services.auth_service import autenticar
-    from services.sala_service import criar_sala
-    from utils.security import gerar_senha_hash
-
-    quantidade = 50_000
-    db = criar_db_vazio(incluir_admin=False)
-    adm = Usuario("stress_adm", "ADM", senha_hash=gerar_senha_hash("stress_adm123"))
-    professor = Usuario(
-        "stress_professor",
-        "PROFESSOR",
-        senha_hash=gerar_senha_hash("stress_professor123"),
+    sucesso, mensagem = criar_ocorrencia(
+        db,
+        usuario,
+        body["aluno"],
+        body["descricao"],
+        body["categoria"],
+        body["prioridade"]
     )
-    coordenador = Usuario(
-        "stress_coordenador",
-        "COORDENADOR",
-        senha_hash=gerar_senha_hash("stress_coordenador123"),
-    )
-    diretor = Usuario("stress_diretor", "DIRETOR", senha_hash=gerar_senha_hash("stress_diretor123"))
 
-    db["usuarios"].extend([
-        adm.para_dict(),
-        professor.para_dict(),
-        coordenador.para_dict(),
-        diretor.para_dict(),
-    ])
-    adm, _ = autenticar(db, "stress_adm", "stress_adm123")
-    professor, _ = autenticar(db, "stress_professor", "stress_professor123")
-    coordenador, _ = autenticar(db, "stress_coordenador", "stress_coordenador123")
-    diretor, _ = autenticar(db, "stress_diretor", "stress_diretor123")
+    if sucesso:
+        salvar_db(db)
 
-    assert adm is not None, "Falha na autenticacao do ADM"
-    assert professor is not None, "Falha na autenticacao do PROFESSOR"
-    assert coordenador is not None, "Falha na autenticacao do COORDENADOR"
-    assert diretor is not None, "Falha na autenticacao do DIRETOR"
+    resposta({
+        "sucesso": sucesso,
+        "mensagem": mensagem
+    })
 
-    tracemalloc.start()
-    inicio_total = time.perf_counter()
 
-    criar_sala(db, adm, "1A")
+elif comando == "listar":
+    sucesso, mensagem, dados = listar_ocorrencias(db, usuario)
 
-    inicio_alunos = time.perf_counter()
-    for indice in range(quantidade):
-        db["alunos"].append(Aluno(f"Aluno {indice}", "1A").para_dict())
-    tempo_alunos = time.perf_counter() - inicio_alunos
-
-    inicio_ocorrencias = time.perf_counter()
-    for indice in range(quantidade):
-        db["ocorrencias"].append(Ocorrencia(
-            aluno=f"Aluno {indice}",
-            descricao=f"Ocorrencia de teste {indice}",
-            categoria=CATEGORIAS[indice % len(CATEGORIAS)],
-            prioridade=PRIORIDADES[indice % len(PRIORIDADES)],
-            criado_por=professor.nome,
-        ).para_dict())
-    tempo_ocorrencias = time.perf_counter() - inicio_ocorrencias
-
-    inicio_transicoes = time.perf_counter()
-    for indice in range(quantidade):
-        for status, usuario in (
-            ("EM_ANALISE", coordenador),
-            ("RESOLVIDA", coordenador),
-            ("ENCERRADA", diretor),
-        ):
-            sucesso, mensagem = atualizar_status_ocorrencia(db, usuario, indice, status)
-            if not sucesso:
-                raise RuntimeError(mensagem)
-    tempo_transicoes = time.perf_counter() - inicio_transicoes
-
-    tempo_total = time.perf_counter() - inicio_total
-    memoria_atual, pico_memoria = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-
-    resultado = {
-        "alunos": quantidade,
-        "ocorrencias": quantidade,
-        "transicoes": quantidade * 3,
-        "tempo_alunos_seg": round(tempo_alunos, 3),
-        "tempo_ocorrencias_seg": round(tempo_ocorrencias, 3),
-        "tempo_transicoes_seg": round(tempo_transicoes, 3),
-        "tempo_total_seg": round(tempo_total, 3),
-        "memoria_atual_mb": round(memoria_atual / 1024 / 1024, 2),
-        "pico_memoria_mb": round(pico_memoria / 1024 / 1024, 2),
-    }
-
-    log_info("Teste de estresse concluido")
-    for chave, valor in resultado.items():
-        print(f"{chave}: {valor}")
-
-    return resultado
+    resposta({
+        "sucesso": sucesso,
+        "dados": dados,
+        "mensagem": mensagem
+    })

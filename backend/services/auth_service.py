@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+from models.usuario import Usuario
+from utils.validators import exigir_permissao, normalizar_papel, normalizar_texto, validar_papel
+
+=======
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 import sys
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -5,6 +11,8 @@ from datetime import datetime, timedelta, timezone
 from models.usuario import Usuario
 from utils.cli import obter_credenciais, parse_comando_json
 from utils.db import carregar_db, salvar_db
+<<<<<<< HEAD
+=======
 from utils.db import DB_LOCK
 from utils.security import gerar_senha_hash, validar_senha, verificar_senha
 from utils.sessions import (
@@ -26,26 +34,20 @@ from utils.validators import (
 
 MAX_TENTATIVAS_LOGIN = 5
 BLOQUEIO_LOGIN_SEGUNDOS = 300
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 
 
 def buscar_usuario(db, nome):
-    if not isinstance(db, dict):
-        return None, None
-
     nome = normalizar_texto(nome).lower()
-    usuarios = db.get("usuarios", [])
-    if not isinstance(usuarios, list):
-        return None, None
-
-    for indice, usuario in enumerate(usuarios):
-        if not isinstance(usuario, dict):
-            continue
-        username = usuario.get("nome", usuario.get("username", ""))
-        if normalizar_texto(username).lower() == nome:
+    for indice, usuario in enumerate(db.get("usuarios", [])):
+        if normalizar_texto(usuario.get("nome", "")).lower() == nome:
             return indice, usuario
     return None, None
 
 
+<<<<<<< HEAD
+def autenticar(db, nome, papel):
+=======
 def buscar_usuario_por_id(db, id):
     if not isinstance(db, dict):
         return None, None
@@ -130,11 +132,16 @@ def _registrar_login_valido(usuario):
 
 
 def autenticar(db, nome, senha):
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
     nome = normalizar_texto(nome)
+    papel = normalizar_papel(papel)
 
-    if not nome:
-        return None, "Usuario invalido"
+    if not nome or not validar_papel(papel):
+        return None, "Usuario ou papel invalido"
 
+<<<<<<< HEAD
+    _, usuario = buscar_usuario(db, nome)
+=======
     if not isinstance(senha, str) or not senha:
         return None, "Acesso negado: senha invalida"
 
@@ -163,47 +170,47 @@ def autenticar(db, nome, senha):
 
 def login(db, username, senha):
     usuario, mensagem = autenticar(db, username, senha)
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
     if usuario is None:
-        return False, mensagem, None, None
-    return True, mensagem, usuario.sessao_token, usuario
+        return None, "Acesso negado: usuario nao cadastrado"
 
+    if usuario.get("papel") != papel:
+        return None, "Acesso negado: papel nao confere com o cadastro"
 
-def logout(usuario_ou_token):
-    if encerrar_sessao(usuario_ou_token):
-        return True, "Sessao encerrada"
-    return False, "Sessao nao encontrada"
+    return Usuario.de_dict(usuario), "Login autorizado"
 
 
 def listar_usuarios(db, solicitante):
     permitido, mensagem = exigir_permissao(solicitante, "usuario_visualizar")
     if not permitido:
         return False, mensagem, []
-
-    with DB_LOCK:
-        usuarios_db = db.get("usuarios", []) if isinstance(db, dict) else []
-        if not isinstance(usuarios_db, list):
-            return False, "Lista de usuarios invalida", []
-
-        usuarios = []
-        for usuario in usuarios_db:
-            if not isinstance(usuario, dict):
-                return False, "Registro de usuario invalido", []
-            item = deepcopy(usuario)
-            item.pop("senha_hash", None)
-            item.pop("password_hash", None)
-            usuarios.append(item)
-
-    return True, "Usuarios listados", usuarios
+    return True, "Usuarios listados", list(db.get("usuarios", []))
 
 
+<<<<<<< HEAD
+def criar_usuario(db, solicitante, nome, papel):
+=======
 def criar_usuario(db, solicitante, nome, papel, senha, permissoes=None):
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
     permitido, mensagem = exigir_permissao(solicitante, "usuario_criar")
     if not permitido:
         return False, mensagem
 
-    if not isinstance(db, dict):
-        return False, "Banco de dados invalido"
+    if buscar_usuario(db, nome)[1] is not None:
+        return False, "Usuario ja cadastrado"
 
+<<<<<<< HEAD
+    try:
+        usuario = Usuario(nome, papel).para_dict()
+    except ValueError as erro:
+        return False, str(erro)
+
+    db["usuarios"].append(usuario)
+    return True, "Usuario criado"
+
+
+def editar_usuario(db, solicitante, indice, novo_nome, novo_papel):
+=======
     if not validar_senha(senha):
         return False, "Senha deve ter entre 8 e 128 caracteres"
 
@@ -233,29 +240,34 @@ def criar_usuario(db, solicitante, nome, papel, senha, permissoes=None):
 
 
 def editar_usuario(db, solicitante, indice, novo_nome, novo_papel, nova_senha=None, novas_permissoes=None):
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
     permitido, mensagem = exigir_permissao(solicitante, "usuario_editar")
     if not permitido:
         return False, mensagem
 
-    if not isinstance(db, dict):
-        return False, "Banco de dados invalido"
+    usuarios = db.get("usuarios", [])
+    if not isinstance(indice, int) or not 0 <= indice < len(usuarios):
+        return False, "Usuario selecionado invalido"
 
-    with DB_LOCK:
-        usuarios = db.get("usuarios", [])
-        if not isinstance(usuarios, list):
-            return False, "Lista de usuarios invalida"
-        if not isinstance(indice, int) or not 0 <= indice < len(usuarios):
-            return False, "Usuario selecionado invalido"
-        if not isinstance(usuarios[indice], dict):
-            return False, "Registro de usuario invalido"
+    usuario_atual = usuarios[indice]
+    nome_atual = usuario_atual.get("nome", "")
 
-        usuario_atual = usuarios[indice]
-        nome_atual = usuario_atual.get("nome", usuario_atual.get("username", ""))
+    existente_indice, _ = buscar_usuario(db, novo_nome)
+    if existente_indice is not None and existente_indice != indice:
+        return False, "Outro usuario ja usa esse nome"
 
-        existente_indice, _ = buscar_usuario(db, novo_nome)
-        if existente_indice is not None and existente_indice != indice:
-            return False, "Outro usuario ja usa esse nome"
+    try:
+        atualizado = Usuario(novo_nome, novo_papel).para_dict()
+    except ValueError as erro:
+        return False, str(erro)
 
+<<<<<<< HEAD
+    era_adm = usuario_atual.get("papel") == "ADM"
+    deixara_de_ser_adm = atualizado["papel"] != "ADM"
+    total_adms = sum(1 for usuario in usuarios if usuario.get("papel") == "ADM")
+    if era_adm and deixara_de_ser_adm and total_adms <= 1:
+        return False, "Nao e permitido remover o ultimo ADM"
+=======
         try:
             senha_hash = usuario_atual.get("senha_hash") or usuario_atual.get("password_hash")
             precisa_trocar_senha = usuario_atual.get("precisa_trocar_senha", False)
@@ -291,21 +303,35 @@ def editar_usuario(db, solicitante, indice, novo_nome, novo_papel, nova_senha=No
             return False, "Nao e permitido remover o ultimo acesso ADM"
 
         usuarios[indice] = atualizado
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 
+    usuarios[indice] = atualizado
     if solicitante.nome == nome_atual:
         solicitante.nome = atualizado["nome"]
         solicitante.nome_usuario = atualizado["nome"]
         solicitante.papel = atualizado["papel"]
+<<<<<<< HEAD
+=======
         solicitante.id = atualizado["id"]
         solicitante.senha_hash = atualizado.get("senha_hash")
         solicitante.permissoes = atualizado.get("permissoes", [])
         atualizar_sessao(solicitante)
     else:
         invalidar_sessoes_usuario(atualizado["id"])
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 
     return True, "Usuario atualizado"
 
 
+<<<<<<< HEAD
+class UsuarioFake:
+    nome = "API"
+    papel = "ADM"
+
+
+def resposta(data):
+    print(json.dumps(data))
+=======
 def alterar_permissoes(db, solicitante, indice, permissoes):
     if not isinstance(db, dict):
         return False, "Banco de dados invalido"
@@ -357,6 +383,7 @@ def remover_usuario(db, solicitante, indice):
 
     invalidar_sessoes_usuario(removido.get("id"))
     return True, "Usuario removido"
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 
 
 def _autenticar_solicitante_cli(db, payload):
@@ -365,6 +392,41 @@ def _autenticar_solicitante_cli(db, payload):
         return None, "Credenciais do solicitante ausentes"
     return autenticar(db, nome, senha)
 
+<<<<<<< HEAD
+    try:
+        comando = sys.argv[1]
+
+        # ===== LOGIN =====
+        if comando == "login":
+            body = json.loads(sys.argv[2])
+
+            usuario, mensagem = autenticar(
+                db,
+                body["nome"],
+                body["papel"]
+            )
+
+            resposta({
+                "sucesso": usuario is not None,
+                "usuario": usuario.__dict__ if usuario else None,
+                "mensagem": mensagem
+            })
+
+        # ===== LISTAR USUARIOS =====
+        elif comando == "listar":
+            sucesso, mensagem, dados = listar_usuarios(db, solicitante)
+
+            resposta({
+                "sucesso": sucesso,
+                "dados": dados,
+                "mensagem": mensagem
+            })
+
+        # ===== CRIAR USUARIO =====
+        elif comando == "criar":
+            body = json.loads(sys.argv[2])
+
+=======
 
 
 def alterar_senha(db, usuario, senha_atual, nova_senha):
@@ -439,20 +501,63 @@ def _executar_cli(argv=None):
             return resposta_servico(sucesso, mensagem, dados=dados)
 
         if comando == "criar":
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
             sucesso, mensagem = criar_usuario(
                 db,
                 solicitante,
                 body["nome"],
+<<<<<<< HEAD
+                body["papel"]
+            )
+
+            if sucesso:
+                salvar_db(db)
+
+            resposta({
+                "sucesso": sucesso,
+                "mensagem": mensagem
+            })
+
+        # ===== EDITAR USUARIO =====
+        elif comando == "editar":
+            body = json.loads(sys.argv[2])
+
+=======
                 body["papel"],
                 body.get("senha") or body.get("password"),
                 body.get("permissoes"),
             )
         elif comando == "editar":
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
             sucesso, mensagem = editar_usuario(
                 db,
                 solicitante,
                 body["indice"],
                 body["nome"],
+<<<<<<< HEAD
+                body["papel"]
+            )
+
+            if sucesso:
+                salvar_db(db)
+
+            resposta({
+                "sucesso": sucesso,
+                "mensagem": mensagem
+            })
+
+        else:
+            resposta({
+                "sucesso": False,
+                "mensagem": "Comando inválido"
+            })
+
+    except Exception as e:
+        resposta({
+            "sucesso": False,
+            "mensagem": str(e)
+        })
+=======
                 body["papel"],
                 body.get("senha") or body.get("password"),
                 body.get("permissoes"),
@@ -478,3 +583,4 @@ def _executar_cli(argv=None):
 
 if __name__ == "__main__":
     imprimir_resposta(_executar_cli())
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466

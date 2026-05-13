@@ -1,17 +1,8 @@
-import getpass
 import os
 from datetime import datetime
-from utils.security import validar_senha
-from utils.sessions import contexto_autenticado
 
 
 ROLES = ("PROFESSOR", "COORDENADOR", "DIRETOR", "ADM")
-
-PAPEIS_LEGADOS = {
-    "PROF": "PROFESSOR",
-    "ADMIN": "ADM",
-    "ADMINISTRADOR": "ADM",
-}
 
 STATUS_VALIDOS = ("REGISTRADA", "EM_ANALISE", "RESOLVIDA", "ENCERRADA")
 
@@ -94,6 +85,8 @@ PERMISSOES = {
 }
 
 DEBUG_ATIVO = os.getenv("POLAR_DEBUG") == "1"
+<<<<<<< HEAD
+=======
 TAMANHO_MAX_NOME = 120
 TAMANHO_MAX_DESCRICAO = 1000
 PERMISSAO_ADM_EXPLICITA = "ADM"
@@ -103,6 +96,7 @@ PERMISSOES_CONHECIDAS = {
     for permissao in permissoes_papel
 }
 PERMISSOES_CONHECIDAS.add(PERMISSAO_ADM_EXPLICITA)
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 
 
 def log_info(mensagem):
@@ -124,29 +118,16 @@ def normalizar_texto(valor):
     return " ".join(valor.strip().split())
 
 
-def _tem_caractere_controle(valor):
-    return any(ord(caractere) < 32 for caractere in valor)
-
-
 def validar_nome(valor):
-    valor = normalizar_texto(valor)
-    return bool(valor) and len(valor) <= TAMANHO_MAX_NOME and not _tem_caractere_controle(valor)
-
-
-def validar_descricao(valor):
-    valor = normalizar_texto(valor)
-    return bool(valor) and len(valor) <= TAMANHO_MAX_DESCRICAO and not _tem_caractere_controle(valor)
+    return bool(normalizar_texto(valor))
 
 
 def validar_papel(papel):
-    return isinstance(papel, str) and normalizar_papel(papel) in ROLES
+    return isinstance(papel, str) and papel.upper().strip() in ROLES
 
 
 def normalizar_papel(papel):
-    if not isinstance(papel, str):
-        return ""
-    papel = papel.upper().strip()
-    return PAPEIS_LEGADOS.get(papel, papel)
+    return papel.upper().strip()
 
 
 def normalizar_permissao(permissao):
@@ -221,9 +202,6 @@ def validar_data(data):
 
 
 def tem_permissao(usuario, permissao):
-    if not contexto_autenticado(usuario):
-        return False
-
     papel = getattr(usuario, "papel", None)
     if not validar_papel(papel):
         return False
@@ -239,9 +217,6 @@ def tem_permissao(usuario, permissao):
 
 
 def exigir_permissao(usuario, permissao):
-    if not contexto_autenticado(usuario):
-        return False, "Acesso negado: usuario nao autenticado"
-
     if tem_permissao(usuario, permissao):
         return True, "Permissao concedida"
     papel = getattr(usuario, "papel", "DESCONHECIDO")
@@ -281,6 +256,8 @@ def entrada_texto_segura(prompt, obrigatorio=True):
         log_error("Este campo e obrigatorio")
 
 
+<<<<<<< HEAD
+=======
 def entrada_senha_segura(prompt="Senha: ", confirmar=False):
     while True:
         senha = getpass.getpass(prompt)
@@ -297,6 +274,7 @@ def entrada_senha_segura(prompt="Senha: ", confirmar=False):
         return senha
 
 
+>>>>>>> 7379759222222ab49d36193d4788c9bc75502466
 def entrada_int_segura(prompt, limite_max, limite_min=0):
     while True:
         valor_bruto = input(prompt).strip()
