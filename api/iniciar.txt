@@ -4,3 +4,4 @@ cd "C:\Users\JoséDiogoOliveiraDaS\OneDrive - Academico - Secretaria do Estado d
 
 iniciar server
 
+npm start
